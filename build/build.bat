@@ -7,6 +7,12 @@ set DIST=%ROOT%\dist
 set HOST_DIST=%DIST%\host
 set GUEST_DIST=%DIST%\guest
 
+if exist "%DIST%" rmdir /S /Q "%DIST%"
+mkdir "%HOST_DIST%\tray" || goto :err
+mkdir "%HOST_DIST%\service" || goto :err
+mkdir "%GUEST_DIST%\agent" || goto :err
+mkdir "%GUEST_DIST%\client" || goto :err
+
 echo Neue Version setzen? (y/n)
 set /p SETVER=
 
@@ -41,23 +47,28 @@ for /f %%i in ('powershell -NoProfile -Command "(Get-Date).ToUniversalTime().ToS
   echo }
 ) > "%VERSION_JSON%"
 
-echo [1/5] dotnet restore
+echo [1/6] dotnet restore
 dotnet restore "%ROOT%\UsbPassthrough.sln" || goto :err
 
-echo [2/5] dotnet test
+echo [2/6] dotnet test
 dotnet msbuild "%ROOT%\tests\UsbPassthrough.Backend.Tests\UsbPassthrough.Backend.Tests.csproj" -t:Test -p:Configuration=Release -p:UseMSBuildTestInfrastructure=true || goto :err
 
-echo [3/5] publish HostTray
-dotnet publish "%ROOT%\src\UsbPassthrough.HostTray\UsbPassthrough.HostTray.csproj" -c Release -r win-x64 --self-contained false -o "%HOST_DIST%\tray" || goto :err
+echo [3/6] publish HostTray
+dotnet publish "%ROOT%\src\UsbPassthrough.HostTray\UsbPassthrough.HostTray.csproj" -c Release -r win-x64 --self-contained false -p:UseAppHost=true -o "%HOST_DIST%\tray" || goto :err
 
-echo [4/5] publish HostService
-dotnet publish "%ROOT%\src\UsbPassthrough.HostService\UsbPassthrough.HostService.csproj" -c Release -r win-x64 --self-contained false -o "%HOST_DIST%\service" || goto :err
+echo [4/6] publish HostService
+dotnet publish "%ROOT%\src\UsbPassthrough.HostService\UsbPassthrough.HostService.csproj" -c Release -r win-x64 --self-contained false -p:UseAppHost=true -o "%HOST_DIST%\service" || goto :err
 
-echo [5/5] publish GuestAgent
-dotnet publish "%ROOT%\src\UsbPassthrough.GuestAgent\UsbPassthrough.GuestAgent.csproj" -c Release -r win-x64 --self-contained false -o "%GUEST_DIST%\agent" || goto :err
+echo [5/6] publish GuestAgent
+dotnet publish "%ROOT%\src\UsbPassthrough.GuestAgent\UsbPassthrough.GuestAgent.csproj" -c Release -r win-x64 --self-contained false -p:UseAppHost=true -o "%GUEST_DIST%\agent" || goto :err
 
 echo [6/6] publish GuestClient
-dotnet publish "%ROOT%\src\UsbPassthrough.Cli\UsbPassthrough.Cli.csproj" -c Release -r win-x64 --self-contained false -o "%GUEST_DIST%\client" || goto :err
+dotnet publish "%ROOT%\src\UsbPassthrough.Cli\UsbPassthrough.Cli.csproj" -c Release -r win-x64 --self-contained false -p:UseAppHost=true -o "%GUEST_DIST%\client" || goto :err
+
+if not exist "%HOST_DIST%\service\usb-host-service.exe" goto :err_missing_service
+if not exist "%HOST_DIST%\tray\usb-host-tray.exe" goto :err_missing_tray
+if not exist "%GUEST_DIST%\agent\usb-guest-agent.exe" goto :err_missing_agent
+if not exist "%GUEST_DIST%\client\usb-guest-client.exe" goto :err_missing_client
 
 if exist "%ROOT%\Assets\Icons" xcopy /E /I /Y "%ROOT%\Assets\Icons" "%HOST_DIST%\icons" >nul
 if exist "%ROOT%\Assets\Icons" xcopy /E /I /Y "%ROOT%\Assets\Icons" "%GUEST_DIST%\icons" >nul
@@ -104,13 +115,44 @@ if /I "%MAKECERT%"=="y" (
     Export-PfxCertificate -Cert $cert -FilePath (Join-Path $certDir 'UsbPassthrough.pfx') -Password $pwd | Out-Null;
     Set-Content -Path (Join-Path $certDir 'README.txt') -Value 'PFX Passwort: UsbPassthrough!2026';
   " || goto :err
+  if not exist "%DIST%\certs\UsbPassthrough.cer" goto :err_missing_cert
+  if not exist "%DIST%\certs\UsbPassthrough.pfx" goto :err_missing_cert
 )
 
 powershell -NoProfile -Command "Compress-Archive -Path '%HOST_DIST%\*' -DestinationPath '%DIST%\dist-host-%VERSION%.zip' -Force" >nul
 powershell -NoProfile -Command "Compress-Archive -Path '%GUEST_DIST%\*' -DestinationPath '%DIST%\dist-guest-%VERSION%.zip' -Force" >nul
 
 echo Fertig. Artefakte in dist\
+echo Startbare Dateien:
+echo   %HOST_DIST%\server.exe
+echo   %HOST_DIST%\host-ui.exe
+echo   %GUEST_DIST%\guest-agent.exe
+echo   %GUEST_DIST%\client.exe
+if /I "%MAKECERT%"=="y" echo Zertifikate: %DIST%\certs\UsbPassthrough.cer und .pfx
+echo.
+echo Build erfolgreich. Fenster mit einer Taste schliessen.
+pause
 exit /b 0
+
+:err_missing_service
+echo Fehler: %HOST_DIST%\service\usb-host-service.exe wurde nicht erzeugt.
+goto :err
+
+:err_missing_tray
+echo Fehler: %HOST_DIST%\tray\usb-host-tray.exe wurde nicht erzeugt.
+goto :err
+
+:err_missing_agent
+echo Fehler: %GUEST_DIST%\agent\usb-guest-agent.exe wurde nicht erzeugt.
+goto :err
+
+:err_missing_client
+echo Fehler: %GUEST_DIST%\client\usb-guest-client.exe wurde nicht erzeugt.
+goto :err
+
+:err_missing_cert
+echo Fehler: Zertifikate wurden nicht vollständig erzeugt in %DIST%\certs.
+goto :err
 
 :err
 echo Build fehlgeschlagen.
