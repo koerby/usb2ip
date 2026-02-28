@@ -1,0 +1,5 @@
+{
+  "hostAddress": "127.0.0.1",
+  "controlPort": 3240,
+  "autoReconnect": true
+}

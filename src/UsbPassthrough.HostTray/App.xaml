@@ -1,0 +1,20 @@
+<Application x:Class="UsbPassthrough.HostTray.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="clr-namespace:ModernWpf;assembly=ModernWpf"
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ui:ThemeResources />
+            </ResourceDictionary.MergedDictionaries>
+            <Style TargetType="FrameworkElement">
+                <Setter Property="Margin" Value="8" />
+            </Style>
+            <Style TargetType="Button">
+                <Setter Property="Padding" Value="12,6" />
+                <Setter Property="Margin" Value="4" />
+            </Style>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>
