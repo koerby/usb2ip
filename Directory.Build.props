@@ -52,6 +52,9 @@ SPDX-License-Identifier: GPL-3.0-only
     <!-- Assembly metadata -->
     <Product>usbipd-win</Product>
     <Company>Frans van Dorsselaer</Company>
+
+    <!-- Allow building from source archives without a .git folder. -->
+    <DisableGitVersionTask Condition="'$(DisableGitVersionTask)' == '' And !Exists('$(MSBuildThisFileDirectory).git')">true</DisableGitVersionTask>
   </PropertyGroup>
 
   <ItemGroup>
