@@ -14,7 +14,7 @@ set VERSION=
 set COMMENT=
 
 if /I "%SETVER%"=="y" (
-  set /p VERSION=SemVer (z.B. 1.3.0): 
+  set /p VERSION=SemVer ^(z.B. 1.3.0^): 
 ) else (
   for /f "tokens=2 delims=:," %%a in ('findstr /i "\"version\"" "%VERSION_JSON%"') do (
     set VERSION=%%~a
@@ -45,7 +45,7 @@ echo [1/5] dotnet restore
 dotnet restore "%ROOT%\UsbPassthrough.sln" || goto :err
 
 echo [2/5] dotnet test
-dotnet test "%ROOT%\tests\UsbPassthrough.Backend.Tests\UsbPassthrough.Backend.Tests.csproj" -c Release --no-restore -p:TestingPlatformDotnetTestSupport=true || goto :err
+dotnet msbuild "%ROOT%\tests\UsbPassthrough.Backend.Tests\UsbPassthrough.Backend.Tests.csproj" -t:Test -p:Configuration=Release -p:UseMSBuildTestInfrastructure=true || goto :err
 
 echo [3/5] publish HostTray
 dotnet publish "%ROOT%\src\UsbPassthrough.HostTray\UsbPassthrough.HostTray.csproj" -c Release -r win-x64 --self-contained false -o "%HOST_DIST%\tray" || goto :err
@@ -114,4 +114,5 @@ exit /b 0
 
 :err
 echo Build fehlgeschlagen.
+pause
 exit /b 1

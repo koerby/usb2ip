@@ -14,7 +14,7 @@
 
 ```bash
 dotnet restore UsbPassthrough.sln
-dotnet test tests/UsbPassthrough.Backend.Tests/UsbPassthrough.Backend.Tests.csproj -c Release
+dotnet msbuild tests/UsbPassthrough.Backend.Tests/UsbPassthrough.Backend.Tests.csproj -t:Test -p:Configuration=Release -p:UseMSBuildTestInfrastructure=true
 ```
 
 Hinweis: WPF-Publishing ist unter Linux nicht ausführbar; finalen Publish auf Windows ausführen.
